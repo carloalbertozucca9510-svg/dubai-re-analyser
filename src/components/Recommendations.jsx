@@ -1,3 +1,5 @@
+import { pricePerUnit, unitLabel } from '../utils/units.js';
+
 function getMonthlyTrend(data) {
   const map = {};
   for (const t of data) {
@@ -13,24 +15,26 @@ function getMonthlyTrend(data) {
   return months[months.length - 1] - months[0];
 }
 
-function getAreaYields(data) {
+function getAreaStats(data, useSqft) {
   const map = {};
   for (const t of data) {
     const area = t.area_name_en;
-    if (!map[area]) map[area] = { yieldTotal: 0, count: 0, pricePerSqmTotal: 0 };
+    if (!map[area]) map[area] = { yieldTotal: 0, count: 0, pricePerUnitTotal: 0 };
     map[area].yieldTotal += (t.rent_value / t.actual_worth) * 100;
-    map[area].pricePerSqmTotal += t.meter_sale_price;
+    map[area].pricePerUnitTotal += pricePerUnit(t.meter_sale_price, useSqft);
     map[area].count += 1;
   }
-  return Object.entries(map).map(([area, { yieldTotal, count, pricePerSqmTotal }]) => ({
+  return Object.entries(map).map(([area, { yieldTotal, count, pricePerUnitTotal }]) => ({
     area,
     avgYield: yieldTotal / count,
-    avgPricePerSqm: pricePerSqmTotal / count,
+    avgPricePerUnit: pricePerUnitTotal / count,
     count,
   }));
 }
 
-export default function Recommendations({ data }) {
+export default function Recommendations({ data, useSqft }) {
+  const unit = unitLabel(useSqft);
+
   if (!data || data.length === 0) {
     return (
       <div className="rec-card">
@@ -42,18 +46,14 @@ export default function Recommendations({ data }) {
 
   const bullets = [];
   const count = data.length;
-  const avgYield =
-    data.reduce((s, t) => s + (t.rent_value / t.actual_worth) * 100, 0) / count;
-  const avgPrice = data.reduce((s, t) => s + t.actual_worth, 0) / count;
+  const avgYield = data.reduce((s, t) => s + (t.rent_value / t.actual_worth) * 100, 0) / count;
   const trend = getMonthlyTrend(data);
-  const areaYields = getAreaYields(data).sort((a, b) => b.avgYield - a.avgYield);
-  const bestValueAreas = [...areaYields].sort((a, b) => a.avgPricePerSqm - b.avgPricePerSqm).slice(0, 2);
+  const areaStats = getAreaStats(data, useSqft).sort((a, b) => b.avgYield - a.avgYield);
+  const bestValueAreas = [...areaStats].sort((a, b) => a.avgPricePerUnit - b.avgPricePerUnit).slice(0, 2);
 
   if (avgYield > 7) {
     bullets.push(
-      `Strong rental yield of ${avgYield.toFixed(1)}% detected${
-        areaYields[0] ? ` — led by ${areaYields[0].area} at ${areaYields[0].avgYield.toFixed(1)}%` : ''
-      }. Exceeds the typical Dubai threshold of 7%.`
+      `Strong rental yield of ${avgYield.toFixed(1)}% detected${areaStats[0] ? ` — led by ${areaStats[0].area} at ${areaStats[0].avgYield.toFixed(1)}%` : ''}. Exceeds the typical Dubai threshold of 7%.`
     );
   } else if (avgYield > 5) {
     bullets.push(
@@ -76,23 +76,21 @@ export default function Recommendations({ data }) {
   }
 
   if (count >= 30) {
-    bullets.push(
-      `High transaction volume (${count} deals) signals strong market liquidity and investor confidence in the selected segment.`
-    );
+    bullets.push(`High transaction volume (${count} deals) signals strong market liquidity and investor confidence.`);
   } else if (count < 10) {
-    bullets.push(
-      `Low sample size (${count} transactions). Widen the filters for more statistically reliable insights.`
-    );
+    bullets.push(`Low sample size (${count} transactions). Widen the filters for more statistically reliable insights.`);
   }
 
   if (bestValueAreas.length > 0) {
-    const names = bestValueAreas.map((a) => `${a.area} (AED ${Math.round(a.avgPricePerSqm).toLocaleString()}/sqm)`).join(' and ');
-    bullets.push(`Best value by price-per-sqm: ${names} — strong entry points for capital appreciation.`);
+    const names = bestValueAreas
+      .map((a) => `${a.area} (AED ${Math.round(a.avgPricePerUnit).toLocaleString()}/${unit})`)
+      .join(' and ');
+    bullets.push(`Best value by price-per-${unit}: ${names} — strong entry points for capital appreciation.`);
   }
 
-  if (areaYields[0] && areaYields[0].avgYield > 7) {
+  if (areaStats[0] && areaStats[0].avgYield > 7) {
     bullets.push(
-      `Top yield area: ${areaYields[0].area} at ${areaYields[0].avgYield.toFixed(1)}% gross yield — ideal for buy-to-let investors.`
+      `Top yield area: ${areaStats[0].area} at ${areaStats[0].avgYield.toFixed(1)}% gross yield — ideal for buy-to-let investors.`
     );
   }
 
