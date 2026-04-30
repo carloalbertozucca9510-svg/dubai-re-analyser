@@ -4,7 +4,7 @@ const BEDROOMS = ['All', 'Studio', '1 B/R', '2 B/R', '3 B/R', '4 B/R', '5 B/R+']
 const REG_TYPES = ['All', 'Off-Plan', 'Ready'];
 const TRANS_GROUPS = ['All', 'Sales', 'Mortgage'];
 
-export default function FilterPanel({ filters, onChange, onRun, loading }) {
+export default function FilterPanel({ filters, onChange, onRun, loading, useSqft, onToggleUnit }) {
   function set(key, value) {
     onChange({ ...filters, [key]: value });
   }
@@ -17,16 +17,25 @@ export default function FilterPanel({ filters, onChange, onRun, loading }) {
       </div>
 
       <div className="filter-section">
+        <label className="filter-label">Unit</label>
+        <div className="unit-toggle" onClick={onToggleUnit} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onToggleUnit()}>
+          <span className={`unit-option ${!useSqft ? 'unit-active' : ''}`}>sqm</span>
+          <div className={`toggle-track ${useSqft ? 'toggle-right' : 'toggle-left'}`}>
+            <div className="toggle-thumb" />
+          </div>
+          <span className={`unit-option ${useSqft ? 'unit-active' : ''}`}>sqft</span>
+        </div>
+      </div>
+
+      <div className="filter-section">
         <label className="filter-label">Area</label>
         <select
           className="filter-select"
-          value={filters.area || 'All Areas'}
+          value={filters.area === 'All' ? 'All Areas' : filters.area}
           onChange={(e) => set('area', e.target.value === 'All Areas' ? 'All' : e.target.value)}
         >
           {AREAS.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
+            <option key={a} value={a}>{a}</option>
           ))}
         </select>
       </div>
@@ -39,9 +48,7 @@ export default function FilterPanel({ filters, onChange, onRun, loading }) {
           onChange={(e) => set('propertyType', e.target.value)}
         >
           {PROPERTY_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+            <option key={t} value={t}>{t}</option>
           ))}
         </select>
       </div>
@@ -54,9 +61,7 @@ export default function FilterPanel({ filters, onChange, onRun, loading }) {
           onChange={(e) => set('bedrooms', e.target.value)}
         >
           {BEDROOMS.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
+            <option key={b} value={b}>{b}</option>
           ))}
         </select>
       </div>
@@ -69,9 +74,7 @@ export default function FilterPanel({ filters, onChange, onRun, loading }) {
           onChange={(e) => set('regType', e.target.value)}
         >
           {REG_TYPES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
+            <option key={r} value={r}>{r}</option>
           ))}
         </select>
       </div>
@@ -84,9 +87,7 @@ export default function FilterPanel({ filters, onChange, onRun, loading }) {
           onChange={(e) => set('transGroup', e.target.value)}
         >
           {TRANS_GROUPS.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
+            <option key={g} value={g}>{g}</option>
           ))}
         </select>
       </div>
